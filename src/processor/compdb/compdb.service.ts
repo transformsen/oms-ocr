@@ -84,7 +84,7 @@ export class CompDbService
       'WM_OMP_TASK_PROCESSING_SPAN_MINUTES',
     );
     this.ttlTime = MIN_MS * configService.get<number>(
-      'WP_OMP_TTL_MINUTES',
+      'WM_OMP_TTL_MINUTES',
     );
     this.baseDmsUrl = configService.get<string>(
       'WM_OMP_ROOT_URI_DMS',
@@ -311,6 +311,7 @@ export class CompDbService
     taskName: Tasks,
   ): Promise<boolean> {
     let attempt: ITaskAttempt;
+    const now = Date.now();
     switch (taskName) {
       case Tasks.FireEventPostalMailSent:
         attempt = await this.doFireEventPostalMailSentTask(job);
@@ -331,6 +332,7 @@ export class CompDbService
       return true;
     } else {
       const update = {
+        lastProcessingAttempt: now,
         $push: {
           [`tasks.${taskName}.attempts`]: attempt,
         },
@@ -338,6 +340,8 @@ export class CompDbService
       if (
         job.tasks[taskName].attempts.length + 1 >= this.processingAttemptsMax
       ) {
+        update['completionStatus'] = CompletionStatus.Complete;
+        update['overallStatus'] = SuccessStatus.Failure;
         update[`tasks.${taskName}.completionStatus`]
           = CompletionStatus.Complete;
         update[`tasks.${taskName}.overallStatus`] = SuccessStatus.Failure;
@@ -361,11 +365,11 @@ export class CompDbService
   async doNextJob() {
     if (this.activeJob) return;
 
-    const now = Date.now();
     this.activeJob = true;
     if (this.taskProcessingSpanTime) clearTimeout(this.taskProcessingSpanTime);
 
     try {
+      const now = Date.now();
       const job: Document<IJob> = await this.jobModel.findOne({
         completionStatus: CompletionStatus.Incomplete,
         $or: [
@@ -412,6 +416,7 @@ export class CompDbService
                    * to processing the next pending job. */
                   if (job.overallStatus === SuccessStatus.NotAttempted) {
                     await job.updateOne({
+                      lastProcessingAttempt: now,
                       overallStatus: SuccessStatus.WaitingRetry,
                     });
                   }

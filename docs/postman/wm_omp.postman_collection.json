@@ -1,0 +1,65 @@
+{
+	"info": {
+		"_postman_id": "4c7e2510-ca7a-4edd-b739-e33b8c1ef20f",
+		"name": "Wellmark-OutboundMailProcessor",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "/job",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"version\": \"1\",\n  \"requestContext\": {\n    \"source\": {\n      \"system\": {\n        \"name\": \"some-app-or-api\",\n        \"version\": \"1.0\",\n        \"stagingEnvironment\": \"DEV\",\n        \"datacenterEnvironment\": \"AWS\"\n      },\n      \"user\": {\n        \"id\": \"bob1234\"\n      }\n    }\n  },\n  \"name\": \"CIM_DEV_B-9619649_IOI4444444_1581447908\",\n  \"recipient\": {\n    \"addressee\": \"JON GRUDEN\",\n    \"addressLine1\": \"3333 Al Davis Way\",\n    \"addressLine2\": \"\",\n    \"city\": \"Las Vegas\",\n    \"state\": \"NV\",\n    \"zip\": \"89118\",\n    \"zip4\": \"\"\n  },\n  \"item\": {\n    \"contentType\": \"application/pdf\"\n  },\n  \"storage\": {\n    \"system\": \"DMS\",\n    \"conf\": {\n      \"locationId\": \"555\",\n      \"locationName\": \"some_group_name\"\n    }\n  },\n  \"relationships\": [\n    {\n      \"type\": \"CRM-CASE\",\n      \"conf\": {\n        \"id\": \"020e2e43-cb09-4849-9ee0-c8c13b12d0bb\"\n      }\n    },\n    {\n      \"type\": \"CONTENT-SOURCE\",\n      \"conf\": {\n        \"sourceSystemType\": \"GMC\",\n        \"catalogId\": \"gmctid:610d58ad-aa25-409e-9135-12a7f48b95b3\",\n        \"formId\": \"B-9619649\"\n      }\n    }\n  ]\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{BASE_URL}}/job",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"job"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"id": "05309139-e893-48e0-83b9-3180c4b0363c",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"id": "e7067fee-9ed7-47ba-814e-b90b99ce16c2",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"protocolProfileBehavior": {}
+}

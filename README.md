@@ -1,75 +1,133 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo_text.svg" width="320" alt="Nest Logo" /></a>
-</p>
+# Wellmark CIM - Outbound Mail Processor/API
 
-[travis-image]: https://api.travis-ci.org/nestjs/nest.svg?branch=master
-[travis-url]: https://travis-ci.org/nestjs/nest
-[linux-image]: https://img.shields.io/travis/nestjs/nest/master.svg?label=linux
-[linux-url]: https://travis-ci.org/nestjs/nest
+*Instructions are given for, and verified on Ubuntu 18.04.4 LTS. The code does*
+*not rely on any platform-specific functionality, thus it should be possible*
+*to run it on different platforms following similar steps.*
+
+### Content
+- [Prerequisites](#prerequisites)
+- [Installation & Config](#installation-config)
+- [Verification](#verification)
+
+### Prerequisites
+- [Node 12](https://nodejs.org/en/) - consider to install it via
+  [NVM](https://github.com/nvm-sh/nvm)
+- [smbclient](https://www.samba.org/samba/docs/current/man-html/smbclient.1.html)
+  \- install it executing
+  ```
+  $ sudo apt update && sudo apt install smbclient
+  ```
+
+- For local development you will also need:
+  - [MongoDB 4](https://www.mongodb.com/download-center/community), and
+    (optionally) [MongoDB Compass](https://www.mongodb.com/products/compass) -
+    GUI MongoDB Client.
+  - (optionally) [Postman](https://www.postman.com/)
+  - (optionally) a local shared folder (see verification section below for
+    setup instructions).
+
+### Installation & Config
+
+- Install NPM dependencies, executing in the codebase root folder:
+  ```
+  $ npm install
+  ```
+
+- Verify default configuration in the [`.env`](.env) file.
+  | Variable | Value |
+  | --- | --- |
+  | `WM_OMP_MONGODB_URL` | MongodDB connection URL. [Its format documented here](https://docs.mongodb.com/manual/reference/connection-string/#standard-connection-string-format), and it is preset to the defaul connection URL of a local MongoDB instance. |
+  | `WM_OMP_MSQ_SHARE` | Path to the shared (network) MSQ folder. It should be `//hostname/path`, e.g. for locally setup shared folder for testing, it will be `//localhost/foldername`. |
+  | `WM_OMP_MSQ_USERNAME` | Username for MSQ folder access, if any. |
+  | `WM_OMP_MSQ_PASSWORD` | Password for MSQ folder access, if any. |
+  | `WM_OMP_MSQ_SCAN_INTERVAL` | Time interval between MSQ polling by processor, in [`zeit/ms`](https://github.com/zeit/ms) format, e.g. `30s`. |
+  | `WM_OMP_PROCESSING_ATTEMPTS_MAX` | The maximum number of attempts after which a task, and the job containing it, are considered failed. |
+  | `WM_OMP_TASK_PROCESSING_SPAN_MINUTES` | The time [min] between retries of failed tasks |
+  | `WM_OMP_TTL_MINUTES` | The time [min] after which a job is marked failed if it has not got necessary artifacts. |
+  | `WM_OMP_ROOT_URI_DMS` | Root URL of DMS API. The codebase includes a simple mock available at `http://localhost:3000/mocks` base URL. |
+  | `WM_OMP_ROOT_URI_EVENT_API` | Root URL of Event API. The codebase includes a simple mock available at `http://localhost:3000/mocks` base URL. |
+  | `WM_OMP_BODY_LIMIT` | The maximum payload size of POST endpoints exposed by API, e.g. `10mb`. |
+
+  Any of these settings can be overriden by defining an environment variable of
+  the same name.
   
-  <p align="center">A progressive <a href="http://nodejs.org" target="blank">Node.js</a> framework for building efficient and scalable server-side applications, heavily inspired by <a href="https://angular.io" target="blank">Angular</a>.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore"><img src="https://img.shields.io/npm/dm/@nestjs/core.svg" alt="NPM Downloads" /></a>
-<a href="https://travis-ci.org/nestjs/nest"><img src="https://api.travis-ci.org/nestjs/nest.svg?branch=master" alt="Travis" /></a>
-<a href="https://travis-ci.org/nestjs/nest"><img src="https://img.shields.io/travis/nestjs/nest/master.svg?label=linux" alt="Linux" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#5" alt="Coverage" /></a>
-<a href="https://gitter.im/nestjs/nestjs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge"><img src="https://badges.gitter.im/nestjs/nestjs.svg" alt="Gitter" /></a>
-<a href="https://opencollective.com/nest#backer"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec"><img src="https://img.shields.io/badge/Donate-PayPal-dc3d53.svg"/></a>
-  <a href="https://twitter.com/nestframework"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+  Also, you may create another environment file (e.g. `.secret.env`, which is  also ignored in `.gitignore`), and run the API the following way
+  to use it instead of `.env`:
+  ```
+  $ WM_OMP_CONFIG_ENV=".secret" npm start
+  ```
+- To run API, and job processor in different modes use one of the following
+  commands. If you want to rely on local MongoDB and MSQ shared folder, see
+  additional instructions in the verification section below on how to configure
+  and run them before API & processor.
+  ```bash
+  # development mode
+  $ npm start
 
-## Description
+  # watch mode (development + auto restart on code changes)
+  $ npm run start:dev
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+  # production mode
+  $ npm run start:prod
+  ```
 
-## Installation
+### Verification
 
-```bash
-$ npm install
-```
+- The local MongoDB instance by default is started as
+  ```
+  $ monogod --dbpath /path/to/db
+  ```
 
-## Running the app
+- To setup locally a shared (network) folder for testing on Ubuntu:
 
-```bash
-# development
-$ npm run start
+  - Right click on an existing folder in _Files_ browser, go to
+    the *Local Network Share* tab, check _Share this folder_ box,
+    enter the name under which it will be visible, e.g. `test_folder`,
+    and optionally check _Guest access_. If you have not shared any
+    folders before, Ubuntu will ask to install necessary packages,
+    to which you should agree.
 
-# watch mode
-$ npm run start:dev
+  - To set a password for the shared folder you can do in the terminal:
+    ```
+    $ sudo smbpasswd -a USERNAME
+    ```
+    where `USERNAME` should be a valid username on your machine, e.g. your own
+    username.
 
-# production mode
-$ npm run start:prod
-```
+  - To verify the setup, go to _Other Locations_ (in left panel of _File_
+    browser), and enter into _Connect to Server_ input field at the bottom
+    of the page the name of shared folder, e.g. `smb://localhost/test_folder`,
+    press _Connect_, enter credentials.
 
-## Test
+- Load Postman collection and environment for the API from
+  [`/docs/postman/wm_omp.postman_collection.json`](docs/postman/wm_omp.postman_collection.json) and [`/docs/postman/wm_omp.postman_environment.json`](docs/postman/wm_omp.postman_environment.json).
 
-```bash
-# unit tests
-$ npm run test
+- Also connect to DB with MongoDB Compass to monitor DB content.
 
-# e2e tests
-$ npm run test:e2e
+- Start API and processor.
 
-# test coverage
-$ npm run test:cov
-```
+- Postman collection contains a single `POST /job` command, which sends to
+  API a valid job with name `CIM_DEV_B-9619649_IOI4444444_1581447908`. Send it.
+  To send another job, you need to update the name, as duplicated name values
+  are forbidden by validation (it was not mentioned in specs explicitly, but
+  the logic described there requires job names to be unique). You will see
+  the job added to DB with `INCOMPLETE` / `NON_ATTEMPTED` statuses, and no
+  tasks scheduled.
 
-## Support
+- Get any PDF file, name it to match a job name, e.g.
+  `CIM_DEV_B-9619649_IOI4444444_1581447908.pdf`, and copy it into
+  the shared folder. Wait for processor to pick it up (by default,
+  it checks the folder every 30 seconds). As it picks up the file,
+  it will pass it to compdb component, which will associated it with
+  the job, schedule two tasks, and executes these tasks, as specified
+  in the challenge documentation. Notice that mock DMS and Event API
+  endpoints, implemented as a temporary part of the codebase, print to
+  the console the received payload each time they are triggered.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-  Nest is [MIT licensed](LICENSE).
+- To simulate a task failure, if you rely on the mock DMS and Event API,
+  as the codebase is setup by default, just go into
+  [`/src/mock-api/mock-api.controller.ts`](src/mock-api/mock-api.controller.ts)
+  and change a mock endpoint URL. If you don't run the API in watch mode -
+  restart it manually. Now, if you repeat the operations described above
+  to create and trigger a new job, the task relying on that endpoint will
+  fail, and thus you can verify processor behavior in fault scenarios.
