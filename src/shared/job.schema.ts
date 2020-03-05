@@ -5,13 +5,20 @@
 import { Schema } from 'mongoose';
 import { v4 as uuid } from 'uuid';
 
-import { Tasks, ValidStatus, ValidTasks, Status } from './api.enums';
+import {
+  CompletionStatus,
+  SuccessStatus,
+  Tasks, 
+  ValidCompletionStatus,
+  ValidSuccessStatus,
+  ValidTasks,
+} from './enums';
 
 const TaskAttemptSchema = new Schema({
   time: Date,
   status: {
     type: String,
-    enum: ValidStatus,
+    enum: ValidCompletionStatus,
   },
   retryableStatus: Boolean,
   errorDetails: {
@@ -27,11 +34,11 @@ const TaskAttemptSchema = new Schema({
 const TaskSchema = new Schema({
   completionStatus: {
     type: String,
-    enum: ValidStatus,
+    enum: ValidCompletionStatus,
   },
   overallStatus: {
     type: String,
-    enum: ValidStatus,
+    enum: ValidSuccessStatus,
   },
   lastProcessingAttempt: Date,
   attempts: [TaskAttemptSchema],
@@ -66,17 +73,26 @@ export const JobSchema = new Schema({
       },
     },
   },
-  created: Date,
-  name: String,
+  created: {
+    type: Date,
+    default: Date.now,
+  },
+  name: {
+    /* It must be unique, or processor won't be able to distinguish different
+     * jobs when matching them by ingressed files from MSQ. */
+    type: String,
+    index: true,
+    unique: true,
+  },
   completionStatus: {
     type: String,
-    enum: ValidStatus,
-    default: Status.Incomplete,
+    enum: ValidCompletionStatus,
+    default: CompletionStatus.Incomplete,
   },
   overallStatus: {
     type: String,
-    enum: ValidStatus,
-    default: Status.NotAttempted,
+    enum: ValidSuccessStatus,
+    default: SuccessStatus.NotAttempted,
   },
   lastProcessingAttempt: Date,
   requestedSendDate: Date,

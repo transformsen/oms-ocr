@@ -3,19 +3,13 @@
  */
 
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 
 import { ApiController } from './api.controller';
 import { ApiService } from './api.service';
-import { JobSchema } from './job.schema';
+import { ProcessorModule } from '../processor/processor.module';
 
 @Module({
-  imports: [
-    MongooseModule.forFeature([{
-      name: 'Job',
-      schema: JobSchema,
-    }]),
-  ],
+  imports: [ProcessorModule],
   controllers: [ApiController],
   providers: [ApiService],
 })

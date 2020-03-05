@@ -2,28 +2,12 @@
  * The TypeScript interface of Job objects.
  */
 
-import { Status, Tasks } from './api.enums';
-
-interface ITaskAttempt {
-  time: Date,
-  status: Status,
-  retryableStatus: boolean,
-  errorDetails: {
-    name: string,
-    message: string,
-    details: string,
-  },
-  successDetails: {
-    details: string,
-  },
-};
-
-interface ITask {
-  completionStatus: Status,
-  overallStatus: Status,
-  lastProcessingAttempt: Date,
-  attempts: ITaskAttempt[],
-};
+import {
+  CompletionStatus,
+  SuccessStatus,
+  Tasks,
+} from './enums';
+import { ITask } from './task.interface';
 
 interface IRelationship {
   type: string,
@@ -53,8 +37,8 @@ export interface IJob {
   id: string,
   created: Date,
   name: string,
-  completionStatus: string,
-  overallStatus: string,
+  completionStatus: CompletionStatus,
+  overallStatus: SuccessStatus,
   lastProcessingAttempt: Date,
   requestedSendDate: Date,
   recipient: {
