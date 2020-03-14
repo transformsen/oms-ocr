@@ -3,7 +3,6 @@
  */
 
 import {
-  HttpService,
   Injectable,
   OnModuleInit,
   OnModuleDestroy,
@@ -20,6 +19,11 @@ import {
 
 import { IJob } from 'src/shared/job.interface';
 import { ITaskAttempt } from 'src/shared/task-attempt.interface';
+import { Event, EventPayLoad } from 'src/shared/event.interface';
+import { Field, DMSUpload } from 'src/shared/dms.upload.interface';
+import { EventApiClientService } from './event-api-client/event-api-client.service';
+import { DMSApiClientService } from './dms-api-client/dms-api-client.service';
+import { OmsOcrService } from './oms-ocr/oms-ocr.service';
 
 const SEC_MS = 1000;
 const MIN_MS = 60 * SEC_MS;
@@ -54,9 +58,6 @@ export class CompDbService
   private taskProcessingSpanTime: number;
   private ttlTime: number;
 
-  private baseDmsUrl: string;
-  private baseEventApiUrl: string;
-
   /**
    * Launches CompDb component on module start-up.
    */
@@ -74,8 +75,10 @@ export class CompDbService
 
   constructor(
     configService: ConfigService,
-    private httpService: HttpService,
-    @InjectModel('Job') private jobModel: Model<IJob>
+    @InjectModel('Job') private jobModel: Model<IJob>,
+    private eventApiClient: EventApiClientService,
+    private dmsApiClient: DMSApiClientService,
+    private omsOcr: OmsOcrService
   ) {
     this.processingAttemptsMax = +configService.get<number>(
       'WM_OMP_PROCESSING_ATTEMPTS_MAX',
@@ -85,13 +88,7 @@ export class CompDbService
     );
     this.ttlTime = MIN_MS * configService.get<number>(
       'WM_OMP_TTL_MINUTES',
-    );
-    this.baseDmsUrl = configService.get<string>(
-      'WM_OMP_ROOT_URI_DMS',
-    );
-    this.baseEventApiUrl = configService.get<string>(
-      'WM_OMP_ROOT_URI_EVENT_API',
-    );
+    );   
     this.doNextJob = this.doNextJob.bind(this);
   }
 
@@ -108,10 +105,17 @@ export class CompDbService
    */
   async receiveFile(name: string, content: string): Promise<boolean> {
     const jobName = name.match(/(.*)\.pdf$/i)[1];
-    const job: Document<IJob> = await this.jobModel.findOne({
+    let job: Document<IJob> = await this.jobModel.findOne({
       name: jobName,
     }).exec();
-    if (!job) return false;
+    if (!job) {
+      //Job does not exist. Invoke OMS OCR process
+      //This Process will result either Failure or Not Attempted Job
+      //Failure - Stop workflow.
+      //Not Attempted - continue the workflow
+      job = await this.omsOcr.process(name)
+      if(job.overallStatus == SuccessStatus.Failure) return true;
+    }
     if (
       (job.item && job.item.content) // Already got content.
       || job.overallStatus !== SuccessStatus.NotAttempted // Already in work.
@@ -141,7 +145,6 @@ export class CompDbService
   ): Promise<ITaskAttempt> {
     const time = new Date();
     try {
-      const url = `${this.baseEventApiUrl}/event`;
       const jobDesc = {
         ...job.toJSON(),
         item: undefined,
@@ -151,51 +154,51 @@ export class CompDbService
         overallStatus: undefined,
         lastProcessingAttempt: undefined,
       };
-      await await this.httpService.post(
-        url,
-        {
-          effectiveDatetime: '',
-          classification: 'TECHNICAL',
-          description: 'An item has been sent through postal mail',
-          subjectAreaNm: 'event',
-          subjectSubAreaNm: 'contactevent',
-          objNm: 'CONTACT_POSTAL_MAIL',
-          srcSysCd: '????',
-          eventPayload: {
-            contentType: 'application/json',
-            contentEncoding: '7bit',
-            name: job.name,
-            extension: 'json',
-            payloadObject: {
-              version: '1',
-              'mailProcessingJob.id': job.id,
-              'mailProcessingJob.created': job.created,
-              addressee: {
-                name: job.recipient.addressee,
-                address: {
-                  line1: job.recipient.addressLine1,
-                  line2: job.recipient.addressLine2,
-                  city: job.recipient.city,
-                  state: job.recipient.state,
-                  zip: job.recipient.zip,
-                  zip4: job.recipient.zip4,
-                },
-                wid: 'UNKNOWN',
-                ioi: 'UNKNOWN',
-              },
-              item: {
-                link: '//some//link//to//dms//doc'
-              },
-              mailProcessingJob: {
-                description: jobDesc,
-              },
-              originalRequestContext: {
-                description: job.requestContext,
-              },
+      const eventPayLoad = {
+        contentType: 'application/json',
+        contentEncoding: '7bit',
+        name: job.name,
+        extension: 'json',
+        payloadObject: {
+          version: '1',
+          'mailProcessingJob.id': job.id,
+          'mailProcessingJob.created': job.created,
+          addressee: {
+            name: job.recipient.addressee,
+            address: {
+              line1: job.recipient.addressLine1,
+              line2: job.recipient.addressLine2,
+              city: job.recipient.city,
+              state: job.recipient.state,
+              zip: job.recipient.zip,
+              zip4: job.recipient.zip4,
             },
+            wid: 'UNKNOWN',
+            ioi: 'UNKNOWN',
+          },
+          item: {
+            link: '//some//link//to//dms//doc'
+          },
+          mailProcessingJob: {
+            description: jobDesc,
+          },
+          originalRequestContext: {
+            description: job.requestContext,
           },
         },
-      ).toPromise();
+      } as EventPayLoad;
+
+      const event: Event = {
+        effectiveDatetime: '',
+        classification: 'TECHNICAL',
+        description: 'An item has been sent through postal mail',
+        subjectAreaNm: 'event',
+        subjectSubAreaNm: 'contactevent',
+        objNm: 'CONTACT_POSTAL_MAIL',
+        srcSysCd: '????',
+        eventPayload: eventPayLoad
+      }; 
+      await this.eventApiClient.postEvent(event);
       return {
         time,
         status: SuccessStatus.Success,
@@ -226,14 +229,13 @@ export class CompDbService
   ): Promise<ITaskAttempt> {
     const time = new Date();
     try {
-      const url = `${this.baseDmsUrl}/documents/upload`;
       const fieldArray = [];
       const add = (name, value) => {
         fieldArray.push({
           id: fieldArray.length,
           fieldName: name,
           fieldValue: value,
-        })
+        } as Field)
       };
       add('mailProcessingJob.id', job.id);
       add('mailProcessingJob.created', job.created);
@@ -242,7 +244,9 @@ export class CompDbService
       const crm = job.relationships.find(({type}) => type === 'CRM-CASE');
       const contentSource = job.relationships
         .find(({type}) => type === 'CONTENT-SOURCE');
-      add('crm.caseId', crm.conf.id);
+      if(crm && crm.conf){
+        add('crm.caseId', crm.conf.id);
+      }
       add('content.source.id', contentSource.conf.catalogId);
       add('content.source.formId', contentSource.conf.formId);
       add('uploader.system.name', job.requestContext.source.system.name);
@@ -255,22 +259,20 @@ export class CompDbService
         'uploader.system.datacenterEnvironment',
         job.requestContext.source.system.datacenterEnvironment,
       );
-      await this.httpService.post(
-        url,
-        [
-          {
-            file: {
-              bytes: job.item.content,
-              contentType: job.item.contentType,
-            },
-            metadatas: [{
-              locationId: job.storage.conf.locationId,
-              locationName: job.storage.conf.locationName,
-              fieldArray,
-            }]
+      const dmeUploadArray: DMSUpload[] = [
+        {
+          file: {
+            bytes: job.item.content,
+            contentType: job.item.contentType,
           },
-        ],
-      ).toPromise();
+          metadatas: [{
+            locationId: job.storage.conf.locationId,
+            locationName: job.storage.conf.locationName,
+            fieldArray,
+          }]
+        }
+      ]
+      await this.dmsApiClient.upload(dmeUploadArray)       
       return {
         time,
         status: SuccessStatus.Success,
@@ -321,6 +323,7 @@ export class CompDbService
         break;
     }
     if (attempt.status === SuccessStatus.Success) {
+
       await job.updateOne({
         [`tasks.${taskName}.completionStatus`]: CompletionStatus.Complete,
         [`tasks.${taskName}.overallStatus`]: SuccessStatus.Success,
@@ -351,6 +354,7 @@ export class CompDbService
         update[`tasks.${taskName}.overallStatus`]
           = SuccessStatus.WaitingRetry;
       }
+      update['finishedAt'] = new Date()
       await job.updateOne(update);
       /* Job handling process will move to the next job. */
       return false;
@@ -390,6 +394,7 @@ export class CompDbService
               completionStatus: CompletionStatus.Complete,
               overallStatus: SuccessStatus.Failure,
               lastProcessingAttempt: now,
+              finishedAt : new Date()
             });
             console.log(`Job ${job.name} reached TTL`);
           } else {
@@ -400,6 +405,7 @@ export class CompDbService
              * the processing right away in the next cycle. */
             await job.updateOne({
               lastProcessingAttempt: now,
+              finishedAt : new Date()
             });
           }
         } else {
@@ -434,6 +440,7 @@ export class CompDbService
                   completionStatus: CompletionStatus.Complete,
                   overallStatus: SuccessStatus.Failure,
                   lastProcessingAttempt: now,
+                  finishedAt : new Date()
                 });
             }
           }
@@ -443,6 +450,7 @@ export class CompDbService
             completionStatus: CompletionStatus.Complete,
             overallStatus: SuccessStatus.Success,
             lastProcessingAttempt: now,
+            finishedAt : new Date(),
             item: null,
           });
         }

@@ -77,6 +77,10 @@ export const JobSchema = new Schema({
     type: Date,
     default: Date.now,
   },
+  finishedAt : {
+    type: Date,
+    default: Date.now,
+  },
   name: {
     /* It must be unique, or processor won't be able to distinguish different
      * jobs when matching them by ingressed files from MSQ. */

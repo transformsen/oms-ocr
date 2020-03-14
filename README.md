@@ -1,8 +1,6 @@
 # Wellmark CIM - Outbound Mail Processor/API
-
-*Instructions are given for, and verified on Ubuntu 18.04.4 LTS. The code does*
-*not rely on any platform-specific functionality, thus it should be possible*
-*to run it on different platforms following similar steps.*
+*Please check VERIFICATION.md created for this challenge*
+*Updated this file for consolidated verification of end to end*
 
 ### Content
 - [Prerequisites](#prerequisites)
@@ -12,12 +10,6 @@
 ### Prerequisites
 - [Node 12](https://nodejs.org/en/) - consider to install it via
   [NVM](https://github.com/nvm-sh/nvm)
-- [smbclient](https://www.samba.org/samba/docs/current/man-html/smbclient.1.html)
-  \- install it executing
-  ```
-  $ sudo apt update && sudo apt install smbclient
-  ```
-
 - For local development you will also need:
   - [MongoDB 4](https://www.mongodb.com/download-center/community), and
     (optionally) [MongoDB Compass](https://www.mongodb.com/products/compass) -
@@ -45,8 +37,12 @@
   | `WM_OMP_TASK_PROCESSING_SPAN_MINUTES` | The time [min] between retries of failed tasks |
   | `WM_OMP_TTL_MINUTES` | The time [min] after which a job is marked failed if it has not got necessary artifacts. |
   | `WM_OMP_ROOT_URI_DMS` | Root URL of DMS API. The codebase includes a simple mock available at `http://localhost:3000/mocks` base URL. |
-  | `WM_OMP_ROOT_URI_EVENT_API` | Root URL of Event API. The codebase includes a simple mock available at `http://localhost:3000/mocks` base URL. |
+  | `WM_OMP_ROOT_URI_EVENT_API` | Root URL of Event API. The codebase includes a simple mock available at `http://localhost:3000/mocks` base URL. |  
   | `WM_OMP_BODY_LIMIT` | The maximum payload size of POST endpoints exposed by API, e.g. `10mb`. |
+  | `WM_OMP_MIB_LOCATION` | Location of MIB files. Local directory or UNC directory, e.g. `\\DESKTOP-IRI51JI\unc_folder` or `./mnt`. |
+  | `WM_OMP_ROOT_URL_JOB` | Root URL for Job creation API. Job creation api has been reused for creating the job on OMS - ORC Process. e.g. `http://localhost:3000` |
+  | `NODE_ENV` | Node enviroment where this job is running. e.g. `development` |
+  | `DATACENTER_ENV` | Date Center enviroment where this job is running. e.g. `us-west-2` |
 
   Any of these settings can be overriden by defining an environment variable of
   the same name.
@@ -70,7 +66,8 @@
   # production mode
   $ npm run start:prod
   ```
-
+*Please check VERIFICATION.md created for this challenge*
+*Updated this file for consolidated verification of end to end*
 ### Verification
 
 - The local MongoDB instance by default is started as
@@ -78,27 +75,14 @@
   $ monogod --dbpath /path/to/db
   ```
 
-- To setup locally a shared (network) folder for testing on Ubuntu:
+- To test local directory and UNC path:
 
-  - Right click on an existing folder in _Files_ browser, go to
-    the *Local Network Share* tab, check _Share this folder_ box,
-    enter the name under which it will be visible, e.g. `test_folder`,
-    and optionally check _Guest access_. If you have not shared any
-    folders before, Ubuntu will ask to install necessary packages,
-    to which you should agree.
-
-  - To set a password for the shared folder you can do in the terminal:
-    ```
-    $ sudo smbpasswd -a USERNAME
-    ```
-    where `USERNAME` should be a valid username on your machine, e.g. your own
-    username.
-
-  - To verify the setup, go to _Other Locations_ (in left panel of _File_
-    browser), and enter into _Connect to Server_ input field at the bottom
-    of the page the name of shared folder, e.g. `smb://localhost/test_folder`,
-    press _Connect_, enter credentials.
-
+  - Local Directory 
+    - Copy the files under ./doc/mib to ./mnt - for testing with local directory
+  - UNC Directory 
+    - Create UNC directory in your computer. Hint - [How to create UNC](https://knowledge.autodesk.com/support/3ds-max/learn-explore/caas/sfdcarticles/sfdcarticles/How-to-assign-a-path-using-the-Universal-Naming-Convention-UNC.html) 
+    - Update the UNC path to environment variaable WM_OMP_MIB_LOCATION. Example UNC path (\\DESKTOP-IRI51JI\unc_folder) 
+    - Restart the application npm run start:dev
 - Load Postman collection and environment for the API from
   [`/docs/postman/wm_omp.postman_collection.json`](docs/postman/wm_omp.postman_collection.json) and [`/docs/postman/wm_omp.postman_environment.json`](docs/postman/wm_omp.postman_environment.json).
 
@@ -131,3 +115,13 @@
   restart it manually. Now, if you repeat the operations described above
   to create and trigger a new job, the task relying on that endpoint will
   fail, and thus you can verify processor behavior in fault scenarios.
+
+- finishedAt added to the job. You can this from Mongo DB document
+
+- Mock API will be invoked from client service files
+
+- Start API and processor.
+
+- OMS OCR
+    - Add only PDF file to ./mnt or UNC directory. Check MongoDB document under jobs collection. New job should create and marked as COMPLETED and FAILURE
+    - Add both PDF and CSV file to ./mnt or UNC directory. Check MongoDB document under jobs collection. New job should create and marked as COMPLETED and SUCCESS. Other 2 Workflow TASK should be updated in jobs and both of them should marked to their respective statuses.

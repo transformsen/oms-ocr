@@ -35,3 +35,12 @@ export const ValidTasks = [
   Tasks.FireEventPostalMailSent,
   Tasks.UploadToDms,
 ];
+
+export const enum System {
+  OMS = 'OMS'
+}
+
+export const enum RelationType{
+  CONTENT_SOURCE = 'CONTENT-SOURCE',
+  CRM_CASE = 'CRM-CASE'
+}

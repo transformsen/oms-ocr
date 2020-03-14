@@ -27,6 +27,7 @@
     "@nestjs/platform-express": "^6.10.14",
     "class-transformer": "^0.2.3",
     "class-validator": "^0.11.0",
+    "csv-parser": "^2.3.2",
     "mongoose": "^5.9.3",
     "ms": "^2.1.2",
     "reflect-metadata": "^0.1.13",

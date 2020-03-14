@@ -6,6 +6,9 @@ import { HttpModule, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CompDbService } from './compdb.service';
 import { JobSchema } from 'src/shared/job.schema';
+import { DMSApiClientService } from './dms-api-client/dms-api-client.service';
+import { EventApiClientService } from './event-api-client/event-api-client.service';
+import { OmsOcrService } from './oms-ocr/oms-ocr.service';
 
 @Module({
   imports: [
@@ -16,6 +19,6 @@ import { JobSchema } from 'src/shared/job.schema';
     }]),
   ],
   exports: [CompDbService],
-  providers: [CompDbService],
+  providers: [CompDbService, EventApiClientService, DMSApiClientService, OmsOcrService],
 })
 export class CompDbModule {}

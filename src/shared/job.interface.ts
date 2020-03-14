@@ -36,6 +36,7 @@ export interface IJob {
   },
   id: string,
   created: Date,
+  finishedAt: Date,
   name: string,
   completionStatus: CompletionStatus,
   overallStatus: SuccessStatus,
