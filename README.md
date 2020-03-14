@@ -78,7 +78,8 @@
 - To test local directory and UNC path:
 
   - Local Directory 
-    - Copy the files under ./doc/mib to ./mnt - for testing with local directory
+    - There are 2 test files available under ./mnt for processing
+    - For further testing - Copy the sample test files under ./doc/mib to ./mnt - for testing with local directory
   - UNC Directory 
     - Create UNC directory in your computer. Hint - [How to create UNC](https://knowledge.autodesk.com/support/3ds-max/learn-explore/caas/sfdcarticles/sfdcarticles/How-to-assign-a-path-using-the-Universal-Naming-Convention-UNC.html) 
     - Update the UNC path to environment variaable WM_OMP_MIB_LOCATION. Example UNC path (\\DESKTOP-IRI51JI\unc_folder) 
